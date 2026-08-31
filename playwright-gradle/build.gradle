@@ -1,0 +1,37 @@
+plugins {
+    id 'java'
+}
+
+group = 'org.example'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Playwright Java dependency
+    implementation 'com.microsoft.playwright:playwright:1.49.0'
+    
+    // JUnit 5 for testing
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+
+     // Keep your existing junit-jupiter dependency
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.0' 
+    testImplementation 'org.junit.platform:junit-platform-suite-api:1.11.0'
+    
+    // ADD THIS LINE to provide the launcher at runtime
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // Cucumber dependencias básicas
+    testImplementation 'io.cucumber:cucumber-java:7.20.1'
+    
+    // JUnit 5 con Cucumber para ejecutar las pruebas
+    testImplementation 'io.cucumber:cucumber-junit-platform-engine:7.20.1'
+    
+
+}
+
+test {
+    useJUnitPlatform()
+}

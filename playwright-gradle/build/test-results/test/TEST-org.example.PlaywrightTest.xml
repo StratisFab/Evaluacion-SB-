@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="org.example.PlaywrightTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-08-31T05:18:01.144Z" hostname="LUISCOUTO" time="10.851">
+  <properties/>
+  <testcase name="testSencilloPlaywright()" classname="org.example.PlaywrightTest" time="10.851"/>
+  <system-out><![CDATA[Título de la página: Example Domain
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
