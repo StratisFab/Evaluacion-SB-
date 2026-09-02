@@ -1,0 +1,74 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.stratis'
+version = '1.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    playwrightVersion = '1.47.0'
+    cucumberVersion   = '7.18.1'
+    junitVersion      = '5.10.2'
+    junitPlatform     = '1.10.2'
+    assertjVersion    = '3.26.3'
+}
+
+dependencies {
+    // Playwright (automatización de navegador)
+    testImplementation "com.microsoft.playwright:playwright:${playwrightVersion}"
+
+    // Cucumber (Gherkin + step definitions) sobre JUnit 5 Platform
+    testImplementation "io.cucumber:cucumber-java:${cucumberVersion}"
+    testImplementation "io.cucumber:cucumber-junit-platform-engine:${cucumberVersion}"
+    testImplementation "org.junit.platform:junit-platform-suite:${junitPlatform}"
+    testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+    testRuntimeOnly    "org.junit.platform:junit-platform-launcher:${junitPlatform}"
+
+    // Aserciones
+    testImplementation "org.assertj:assertj-core:${assertjVersion}"
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+test {
+    useJUnitPlatform()
+
+    // Salida de consola en UTF-8 (acentos de los escenarios en Windows)
+    jvmArgs '-Dfile.encoding=UTF-8', '-Dstdout.encoding=UTF-8', '-Dstderr.encoding=UTF-8'
+
+    // Propiedades que se pueden pasar desde línea de comandos:
+    //   gradle test -Dheadless=false -Dbrowser=chromium -Dcucumber.filter.tags=@vuelos
+    ['headless', 'browser', 'slowMo', 'baseUrl', 'cucumber.filter.tags'].each { prop ->
+        if (System.getProperty(prop) != null) {
+            systemProperty prop, System.getProperty(prop)
+        }
+    }
+
+    testLogging {
+        events 'passed', 'failed', 'skipped'
+        showStandardStreams = true
+        exceptionFormat = 'full'
+    }
+
+    // Siempre re-ejecutar las pruebas aunque Gradle las considere "up-to-date"
+    outputs.upToDateWhen { false }
+}
+
+// Acceso al CLI de Playwright, por ejemplo para instalar navegadores:
+//   gradlew playwright --args="install chromium"
+tasks.register('playwright', JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.microsoft.playwright.CLI'
+}
