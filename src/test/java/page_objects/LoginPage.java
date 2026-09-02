@@ -7,31 +7,30 @@ import com.microsoft.playwright.options.AriaRole;
 import java.util.regex.Pattern;
 
 /**
- * Page Object de la pantalla de inicio de sesión a la que redirige el sitio
- * cuando un usuario no autenticado ejecuta una búsqueda de vuelos.
+ * Pantalla de login a la que redirige el sitio al buscar sin sesión iniciada.
  */
 public class LoginPage extends BasePage {
 
-    /** Texto del encabezado en el sitio (inglés). El escenario lo expresa en español. */
+    // El sitio está en inglés; el feature lo expresa en español ("Iniciar sesión en mi cuenta").
     public static final String LOGIN_HEADING_EN = "Log in to my account";
 
     private final Locator loginHeading;
 
     public LoginPage(Page page) {
         super(page);
-        loginHeading = page.getByRole(AriaRole.HEADING,
-                new Page.GetByRoleOptions().setName(Pattern.compile(LOGIN_HEADING_EN, Pattern.CASE_INSENSITIVE)));
+        loginHeading = page.getByRole(AriaRole.HEADING, new Page.GetByRoleOptions()
+                .setName(Pattern.compile(LOGIN_HEADING_EN, Pattern.CASE_INSENSITIVE))).first();
     }
 
     public void waitForLoginHeading() {
-        loginHeading.first().waitFor();
+        loginHeading.waitFor();
     }
 
     public boolean isLoginHeadingVisible() {
-        return loginHeading.first().isVisible();
+        return loginHeading.isVisible();
     }
 
     public String getLoginHeadingText() {
-        return loginHeading.first().textContent().trim();
+        return loginHeading.textContent().trim();
     }
 }

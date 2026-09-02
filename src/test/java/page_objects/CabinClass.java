@@ -2,10 +2,7 @@ package page_objects;
 
 import java.util.Arrays;
 
-/**
- * Clases de cabina del buscador de vuelos.
- * Relaciona la etiqueta en español de los escenarios con el nombre accesible del sitio.
- */
+/** Clase de cabina: etiqueta en español del feature -> nombre en el sitio. */
 public enum CabinClass {
     ECONOMY("Económica", "Economy"),
     PREMIUM_ECONOMY("Económica Premium", "Premium Economy"),

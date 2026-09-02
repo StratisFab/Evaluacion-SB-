@@ -5,14 +5,7 @@ import java.io.InputStream;
 import java.util.Properties;
 
 /**
- * Lee la configuración del framework desde {@code configuration/configuration.properties}.
- * <p>
- * Prioridad de resolución de cada clave:
- * <ol>
- *     <li>Propiedad de sistema ({@code -Dclave=valor})</li>
- *     <li>Archivo de propiedades</li>
- *     <li>Valor por defecto indicado por el llamador</li>
- * </ol>
+ * Lee configuration/configuration.properties. Prioridad: -Dclave=valor > archivo > default.
  */
 public final class ConfigReader {
 
@@ -26,7 +19,7 @@ public final class ConfigReader {
         Properties props = new Properties();
         try (InputStream in = ConfigReader.class.getClassLoader().getResourceAsStream(CONFIG_FILE)) {
             if (in == null) {
-                throw new IllegalStateException("No se encontró el archivo " + CONFIG_FILE + " en el classpath");
+                throw new IllegalStateException("No se encontró " + CONFIG_FILE + " en el classpath");
             }
             props.load(in);
         } catch (IOException e) {

@@ -5,8 +5,7 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.LoadState;
 
 /**
- * Clase base de todos los Page Objects. Concentra el acceso a {@link Page}
- * y utilidades comunes para no repetirlas en cada página.
+ * Base de los page objects: guarda la Page y utilidades comunes.
  */
 public abstract class BasePage {
 
@@ -29,10 +28,7 @@ public abstract class BasePage {
         return page.url();
     }
 
-    /**
-     * Un elemento se considera deshabilitado si tiene el atributo nativo {@code disabled}
-     * o el atributo de accesibilidad {@code aria-disabled="true"} (patrón usado por Amex).
-     */
+    // Amex deshabilita sus controles con aria-disabled, no con el atributo disabled
     protected boolean isDisabled(Locator locator) {
         return locator.isDisabled() || "true".equals(locator.getAttribute("aria-disabled"));
     }

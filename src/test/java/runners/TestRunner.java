@@ -8,12 +8,7 @@ import org.junit.platform.suite.api.Suite;
 import static io.cucumber.junit.platform.engine.Constants.GLUE_PROPERTY_NAME;
 import static io.cucumber.junit.platform.engine.Constants.PLUGIN_PROPERTY_NAME;
 
-/**
- * Punto de entrada de la ejecución (JUnit 5 Platform + Cucumber).
- * <p>
- * Ejecutar: {@code gradlew test}. Para filtrar por tag:
- * {@code gradlew test -Dcucumber.filter.tags=@vuelos}.
- */
+// Runner JUnit 5 + Cucumber. gradlew test  |  gradlew test -Dcucumber.filter.tags=@smoke
 @Suite
 @IncludeEngines("cucumber")
 @SelectClasspathResource("feature")

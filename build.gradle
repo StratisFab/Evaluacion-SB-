@@ -30,6 +30,8 @@ dependencies {
     // Cucumber (Gherkin + step definitions) sobre JUnit 5 Platform
     testImplementation "io.cucumber:cucumber-java:${cucumberVersion}"
     testImplementation "io.cucumber:cucumber-junit-platform-engine:${cucumberVersion}"
+    // Inyección de dependencias entre hooks y step definitions (TestContext por escenario)
+    testImplementation "io.cucumber:cucumber-picocontainer:${cucumberVersion}"
     testImplementation "org.junit.platform:junit-platform-suite:${junitPlatform}"
     testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
     testRuntimeOnly    "org.junit.platform:junit-platform-launcher:${junitPlatform}"
@@ -50,7 +52,9 @@ test {
 
     // Propiedades que se pueden pasar desde línea de comandos:
     //   gradle test -Dheadless=false -Dbrowser=chromium -Dcucumber.filter.tags=@vuelos
-    ['headless', 'browser', 'slowMo', 'baseUrl', 'cucumber.filter.tags'].each { prop ->
+    ['headless', 'browser', 'channel', 'slowMo', 'baseUrl', 'blockMedia', 'traceMode',
+     'departureOffsetDays', 'tripLengthDays', 'cucumber.filter.tags',
+     'cucumber.execution.parallel.enabled'].each { prop ->
         if (System.getProperty(prop) != null) {
             systemProperty prop, System.getProperty(prop)
         }

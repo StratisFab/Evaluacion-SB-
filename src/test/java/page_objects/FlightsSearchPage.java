@@ -10,11 +10,9 @@ import java.time.LocalDate;
 import java.util.regex.Pattern;
 
 /**
- * Page Object del buscador de vuelos de American Express Travel
- * (https://www.americanexpress.com/en-us/travel/flights).
- * <p>
- * Los localizadores privilegian ids estables, {@code data-testid} y roles/nombres
- * accesibles (ARIA) sobre estructuras HTML o posiciones.
+ * Buscador de vuelos de Amex Travel (/en-us/travel/flights).
+ * Localizadores por id, data-testid y roles ARIA; nada de xpath posicional.
+ * Sin aserciones: solo acciones y consultas de estado, las validaciones van en los steps.
  */
 public class FlightsSearchPage extends BasePage {
 
@@ -22,13 +20,14 @@ public class FlightsSearchPage extends BasePage {
     private static final int MAX_OPEN_ATTEMPTS = 3;
     private static final double SHORT_WAIT_MS = 5_000;
 
-    // ---- Tipo de viaje -------------------------------------------------------
+    // Tipo de viaje: radios en escritorio, dropdown en pantallas chicas
     private final Locator tripTypeControl;
+    private final Locator tripTypeDropdown;
 
-    // ---- Clase ----------------------------------------------------------------
+    // Clase
     private final Locator cabinClassDropdown;
 
-    // ---- Viajeros -------------------------------------------------------------
+    // Viajeros
     private final Locator travelersButton;
     private final Locator adultsRow;
     private final Locator adultsInput;
@@ -36,13 +35,13 @@ public class FlightsSearchPage extends BasePage {
     private final Locator increaseAdultsButton;
     private final Locator travelersDoneButton;
 
-    // ---- Origen / destino -------------------------------------------------------
+    // Origen / destino
     private final Locator originInput;
     private final Locator destinationInput;
     private final Locator suggestionsListbox;
     private final Locator suggestionOptions;
 
-    // ---- Fechas -----------------------------------------------------------------
+    // Fechas
     private final Locator departureDateButton;
     private final Locator returnDateButton;
     private final Locator datePopup;
@@ -50,13 +49,14 @@ public class FlightsSearchPage extends BasePage {
     private final Locator nextMonthButton;
     private final Locator datesDoneButton;
 
-    // ---- Búsqueda ----------------------------------------------------------------
+    // Búsqueda
     private final Locator searchButton;
 
     public FlightsSearchPage(Page page) {
         super(page);
 
         tripTypeControl = page.getByTestId("trip-type-segmented-control");
+        tripTypeDropdown = page.locator("#trip-type-dropdown");
 
         cabinClassDropdown = page.locator("#flight-class-dropdown");
 
@@ -76,8 +76,8 @@ public class FlightsSearchPage extends BasePage {
 
         departureDateButton = page.locator("#date-picker-popup-button-start-date");
         returnDateButton = page.locator("#date-picker-popup-button-end-date");
-        // El contenedor del popup incluye los inputs de fecha, el calendario y el botón "Done".
-        // El calendario existe en dos variantes (escritorio y móvil); se filtra la visible.
+        // Ojo: el calendario NO cuelga de #date_popup sino del contenedor date-picker-popup,
+        // y viene duplicado (escritorio/móvil), por eso el filtro visible=true.
         datePopup = page.getByTestId("date-picker-popup");
         calendar = datePopup.getByTestId("date-picker-calendar").locator("visible=true");
         nextMonthButton = datePopup.locator("#nextMonthBtn").locator("visible=true");
@@ -86,44 +86,52 @@ public class FlightsSearchPage extends BasePage {
         searchButton = page.locator("#axp-travel-search-flights_searchButton");
     }
 
-    // =========================================================================
-    // Navegación
-    // =========================================================================
+    // ---------------- Navegación
 
     public void open(String url) {
         navigateTo(url);
+        if (getTitle().contains("Access Denied")) {
+            throw new IllegalStateException("El sitio bloqueó el acceso (Akamai). Revise user agent / red: " + url);
+        }
         searchButton.waitFor();
     }
 
-    // =========================================================================
-    // Tipo de viaje y clase
-    // =========================================================================
+    // ---------------- Tipo de viaje y clase
 
+    // En escritorio es un grupo de radios; en pantallas chicas el sitio lo cambia por un dropdown.
     public void selectTripType(TripType tripType) {
-        tripTypeControl
-                .getByRole(AriaRole.RADIO, new Locator.GetByRoleOptions().setName(tripType.accessibleName()))
-                .click();
+        if (tripTypeControl.isVisible()) {
+            tripTypeRadio(tripType).click();
+        } else {
+            tripTypeDropdown.click();
+            page.getByRole(AriaRole.OPTION, new Page.GetByRoleOptions()
+                    .setName(tripType.accessibleName()).setExact(true)).click();
+        }
     }
 
     public boolean isTripTypeSelected(TripType tripType) {
-        Locator radio = tripTypeControl.getByRole(AriaRole.RADIO,
-                new Locator.GetByRoleOptions().setName(tripType.accessibleName()));
-        return "true".equals(radio.getAttribute("aria-checked"));
+        if (tripTypeControl.isVisible()) {
+            return "true".equals(tripTypeRadio(tripType).getAttribute("aria-checked"));
+        }
+        return tripType.siteValue().equals(tripTypeDropdown.getAttribute("value"));
+    }
+
+    private Locator tripTypeRadio(TripType tripType) {
+        return tripTypeControl.getByRole(AriaRole.RADIO,
+                new Locator.GetByRoleOptions().setName(tripType.accessibleName()).setExact(true));
     }
 
     public void selectCabinClass(CabinClass cabinClass) {
         cabinClassDropdown.click();
-        page.getByRole(AriaRole.OPTION, new Page.GetByRoleOptions().setName(cabinClass.accessibleName()))
-                .click();
+        page.getByRole(AriaRole.OPTION, new Page.GetByRoleOptions()
+                .setName(cabinClass.accessibleName()).setExact(true)).click();
     }
 
     public String getSelectedCabinClass() {
         return cabinClassDropdown.textContent().trim();
     }
 
-    // =========================================================================
-    // Viajeros
-    // =========================================================================
+    // ---------------- Viajeros
 
     public void openTravelersPanel() {
         if (!isExpanded(travelersButton)) {
@@ -132,9 +140,16 @@ public class FlightsSearchPage extends BasePage {
         adultsRow.waitFor();
     }
 
-    /** Ajusta el número de adultos usando los botones +/- hasta llegar a la cantidad deseada. */
+    // Ajusta adultos con +/- hasta la cantidad pedida. Se valida contra min/max del control
+    // para no quedarse esperando un botón deshabilitado hasta el timeout.
     public void setAdults(int desired) {
         openTravelersPanel();
+        int min = attributeAsInt(adultsInput, "min", 1);
+        int max = attributeAsInt(adultsInput, "max", 9);
+        if (desired < min || desired > max) {
+            throw new IllegalArgumentException(
+                    "El número de adultos debe estar entre %d y %d, se recibió %d".formatted(min, max, desired));
+        }
         int current = getAdultsCount();
         while (current < desired) {
             increaseAdultsButton.click();
@@ -154,37 +169,54 @@ public class FlightsSearchPage extends BasePage {
         return isDisabled(decreaseAdultsButton);
     }
 
+    public String getTravelersDoneButtonText() {
+        return travelersDoneButton.textContent().trim();
+    }
+
+    public String getTravelersSummary() {
+        return travelersButton.textContent().trim();
+    }
+
     public void confirmTravelers() {
         travelersDoneButton.click();
         adultsRow.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.HIDDEN));
     }
 
-    // =========================================================================
-    // Origen y destino
-    // =========================================================================
+    // ---------------- Origen y destino
 
     public void typeOrigin(String text) {
-        originInput.click();
-        originInput.fill(text);
-        suggestionOptions.first().waitFor();
+        typeLocation(originInput, text);
     }
 
     public void typeDestination(String text) {
-        destinationInput.click();
-        destinationInput.fill(text);
+        typeLocation(destinationInput, text);
+    }
+
+    private void typeLocation(Locator input, String text) {
+        input.click();
+        input.fill(text);
         suggestionOptions.first().waitFor();
     }
 
-    /**
-     * Selecciona la primera sugerencia de la lista de autocompletado y espera a que la
-     * lista se cierre, para que la siguiente acción no compita con su animación de cierre.
-     */
+    // Espera a que la primera sugerencia contenga el texto esperado (p. ej. el código IATA).
+    // Evita tomar resultados de la consulta anterior mientras llega la respuesta del servidor.
+    public boolean waitForFirstSuggestionContaining(String expectedText) {
+        String expected = expectedText.toUpperCase();
+        try {
+            page.waitForCondition(() -> getFirstSuggestionText().toUpperCase().contains(expected),
+                    new Page.WaitForConditionOptions().setTimeout(SHORT_WAIT_MS));
+            return true;
+        } catch (TimeoutError e) {
+            return false;
+        }
+    }
+
+    // Selecciona la primera sugerencia y espera a que se cierre la lista
     public void selectFirstSuggestion() {
         suggestionOptions.first().click();
         suggestionsListbox.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.HIDDEN));
     }
 
-    /** Devuelve el texto de la primera sugerencia (para validar que corresponde a la ciudad esperada). */
     public String getFirstSuggestionText() {
         return suggestionOptions.first().textContent().trim();
     }
@@ -197,15 +229,10 @@ public class FlightsSearchPage extends BasePage {
         return destinationInput.inputValue();
     }
 
-    // =========================================================================
-    // Fechas
-    // =========================================================================
+    // ---------------- Fechas
 
-    /**
-     * Abre el selector de fechas si aún no está abierto. El sitio a veces abre y cierra el
-     * popup por sí mismo al terminar de capturar el destino, por lo que se reintenta la
-     * apertura un número limitado de veces hasta que el calendario quede visible.
-     */
+    // El popup a veces se abre y se cierra solo justo después de capturar el destino,
+    // así que se reintenta la apertura un par de veces hasta ver el calendario.
     public void openDatePicker() {
         for (int attempt = 1; attempt <= MAX_OPEN_ATTEMPTS; attempt++) {
             if (!isExpanded(departureDateButton)) {
@@ -232,6 +259,14 @@ public class FlightsSearchPage extends BasePage {
         selectDayInCalendar(date);
     }
 
+    public boolean isDatesDoneEnabled() {
+        return !isDisabled(datesDoneButton);
+    }
+
+    public String getDatesDoneButtonText() {
+        return datesDoneButton.textContent().trim();
+    }
+
     public void confirmDates() {
         datesDoneButton.click();
         datePopup.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.HIDDEN));
@@ -245,20 +280,19 @@ public class FlightsSearchPage extends BasePage {
         return returnDateButton.textContent().trim();
     }
 
-    /**
-     * Cada día del calendario expone una clase pensada para automatización:
-     * {@code automation-date-picker-day-YYYY-M-D} (mes y día sin ceros a la izquierda).
-     * Si el mes no está visible, se avanza con "Next Month" hasta encontrarlo.
-     */
+    // Cada día trae la clase automation-date-picker-day-YYYY-M-D (sin ceros a la izquierda).
+    // Si el mes no está a la vista se avanza con "Next Month"; año y mes van en la clase.
     private void selectDayInCalendar(LocalDate date) {
         Locator day = datePopup.locator(dayLocator(date)).locator("visible=true");
-        int attempts = 0;
-        while (day.count() == 0 && attempts < MAX_MONTHS_TO_NAVIGATE) {
+        int monthsNavigated = 0;
+        while (day.count() == 0) {
+            if (monthsNavigated++ >= MAX_MONTHS_TO_NAVIGATE || isDisabled(nextMonthButton)) {
+                throw new IllegalStateException("La fecha " + date + " no está disponible en el calendario");
+            }
             nextMonthButton.click();
-            attempts++;
         }
-        if (day.count() == 0) {
-            throw new IllegalStateException("No se encontró la fecha " + date + " en el calendario");
+        if (isDisabled(day)) {
+            throw new IllegalStateException("La fecha " + date + " no es seleccionable (deshabilitada por el sitio)");
         }
         day.click();
     }
@@ -268,11 +302,23 @@ public class FlightsSearchPage extends BasePage {
                 date.getYear(), date.getMonthValue(), date.getDayOfMonth());
     }
 
-    // =========================================================================
-    // Búsqueda
-    // =========================================================================
+    // ---------------- Búsqueda
+
+    public String getSearchButtonText() {
+        return searchButton.textContent().trim();
+    }
 
     public void clickSearch() {
         searchButton.click();
+    }
+
+    // ---------------- Utilidades
+
+    private static int attributeAsInt(Locator locator, String attribute, int defaultValue) {
+        String value = locator.getAttribute(attribute);
+        if (value == null || value.isBlank()) {
+            return defaultValue;
+        }
+        return Integer.parseInt(value.trim());
     }
 }

@@ -1,107 +1,117 @@
-# Prueba técnica Stratis – Automatización de búsqueda de vuelos (American Express Travel)
+# Prueba técnica Stratis – Búsqueda de vuelos en Amex Travel
 
-Framework de pruebas end-to-end construido con **Java 21 + Gradle 8.4 + Playwright + Cucumber (BDD)**
-aplicando el patrón **Page Object Model (POM)**.
+Automatización del buscador de vuelos de American Express Travel con Java 21, Gradle 8.4,
+Playwright y Cucumber (Gherkin en español), usando Page Object Model.
 
-## Flujo automatizado
+## Flujo que se automatiza
 
-1. Ingresar a https://www.americanexpress.com/en-us/travel/flights
-2. Seleccionar tipo de viaje **Viaje de Ida y Vuelta** (Round Trip).
-3. Seleccionar clase **Primera Clase** (First Class).
-4. Seleccionar **1 adulto** como viajero y validar que el botón **(-)** de adultos esté deshabilitado.
-5. Seleccionar **Hecho** (Done).
-6. En **¿De quién?** (From?) escribir `Mex` y elegir la primera opción → Ciudad de México (MEX).
-7. En **¿A?** (To?) escribir `Cancún` y elegir la primera opción → Cancún (CUN).
-8. Seleccionar una fecha de **Salida** posterior a la fecha actual.
-9. Seleccionar una fecha de **Regreso** posterior a la fecha de salida.
-10. Seleccionar **Hecho** (Done) en el calendario.
-11. Presionar **Búsqueda** (Search).
-12. Validar que se muestre el título **Iniciar sesión en mi cuenta** (*Log in to my account*).
+1. Abrir https://www.americanexpress.com/en-us/travel/flights
+2. Tipo de viaje: Viaje de Ida y Vuelta (Round Trip).
+3. Clase: Primera Clase (First Class).
+4. Viajeros: 1 adulto y validar que el botón (-) esté deshabilitado. Hecho (Done).
+5. ¿De quién? (From?): escribir `Mex` y tomar la primera opción -> Ciudad de México (MEX).
+6. ¿A? (To?): escribir `Cancún` y tomar la primera opción -> Cancún (CUN).
+7. Salida: una fecha posterior a hoy. Regreso: una fecha posterior a la salida. Hecho.
+8. Búsqueda (Search) y validar el título "Iniciar sesión en mi cuenta" (*Log in to my account*).
 
-> El sitio se despliega en inglés (en-us). Los textos en español del ejercicio corresponden a la
-> traducción automática del navegador; los escenarios Gherkin se escriben en español y los Page
-> Objects traducen esas etiquetas a los nombres accesibles reales del sitio (`TripType`, `CabinClass`).
+El sitio está en inglés; los textos en español del ejercicio son la traducción del navegador.
+Los features van en español y los enums `TripType`, `CabinClass` y `UiButton` traducen esas
+etiquetas al texto real de la página.
 
-## Estructura del proyecto
+Hay un segundo escenario de regresión para el contador de adultos: con 2 adultos el (-) se
+habilita y al regresar a 1 se vuelve a deshabilitar.
+
+## Estructura
 
 ```
-├── build.gradle                         # dependencias y tarea test
-├── settings.gradle
-├── gradlew / gradlew.bat                # wrapper de Gradle 8.4
-└── src/test
-    ├── java
-    │   ├── core/                        # infraestructura
-    │   │   ├── ConfigReader.java        # lectura de configuration.properties / -D
-    │   │   └── PlaywrightManager.java   # ciclo de vida Playwright (ThreadLocal)
-    │   ├── page_objects/                # Page Object Model
-    │   │   ├── BasePage.java
-    │   │   ├── FlightsSearchPage.java   # buscador de vuelos
-    │   │   ├── LoginPage.java           # pantalla "Log in to my account"
-    │   │   ├── TripType.java            # enum tipo de viaje (es -> en)
-    │   │   └── CabinClass.java          # enum clase de cabina (es -> en)
-    │   ├── steps_definitions/           # BDD: step definitions y hooks
-    │   │   ├── FlightSearchSteps.java
-    │   │   └── Hooks.java               # abre/cierra navegador, captura en fallo
-    │   └── runners/
-    │       └── TestRunner.java          # JUnit 5 Platform + Cucumber
-    └── resources
-        ├── feature/busqueda_vuelos.feature      # escenario Gherkin (español)
-        ├── configuration/configuration.properties
-        └── junit-platform.properties            # glue/plugins al ejecutar desde IntelliJ
+src/test
+├── java
+│   ├── core/                 ConfigReader, PlaywrightManager (ThreadLocal, trace), TestContext (DI)
+│   ├── page_objects/         BasePage, FlightsSearchPage, LoginPage, TripType, CabinClass, UiButton
+│   ├── steps_definitions/    FlightSearchSteps, Hooks
+│   └── runners/              TestRunner (JUnit 5 Platform + Cucumber)
+└── resources
+    ├── feature/busqueda_vuelos.feature
+    ├── configuration/configuration.properties
+    └── junit-platform.properties     (glue y plugins al correr el .feature desde IntelliJ)
 ```
 
-Capas y responsabilidades:
-
-| Capa | Responsabilidad |
-|---|---|
-| `feature` | Describe el comportamiento en Gherkin (qué se prueba). |
-| `steps_definitions` | Traduce cada paso a llamadas al Page Object y contiene las aserciones. |
-| `page_objects` | Localizadores y acciones de cada pantalla (cómo se interactúa). |
-| `core` | Configuración y ciclo de vida del navegador. |
+- Feature: qué se prueba. Steps: llaman a los page objects y hacen las aserciones.
+  Page objects: localizadores y acciones, sin aserciones. Core: configuración y navegador.
+- `TestContext` se inyecta por constructor (cucumber-picocontainer), una instancia por escenario.
+  Así varios archivos de steps comparten page objects y datos sin estáticos.
 
 ## Selectores
 
-Se privilegian identificadores estables y atributos de accesibilidad, evitando XPath posicional:
+Ids del formulario, `data-testid` y roles/nombres ARIA. Sin xpath posicional.
 
-- `data-testid` (`trip-type-segmented-control`, `adult-stepper-row`, `date-picker-popup`, ...).
-- `id` semánticos del formulario (`flight-class-dropdown`, `axp-travel-search-flights_searchButton`, ...).
-- Roles y nombres accesibles (`getByRole(RADIO, "Round Trip")`, `getByRole(OPTION, "First Class")`).
-- Días del calendario mediante la clase de automatización que expone el sitio:
-  `automation-date-picker-day-YYYY-M-D`.
+Cosas del sitio que hubo que resolver:
+
+- Akamai responde "Access Denied" al user agent de Chromium headless ("HeadlessChrome"). En
+  headless el framework manda el user agent normal de Chrome (configurable con `userAgent`).
+- Tiene `eval` deshabilitado: no sirve `evaluate()` ni `allTextContents()`. Se usa
+  `textContent()`, `inputValue()`, `getAttribute()`, `isDisabled()`.
+- Los controles se deshabilitan con `aria-disabled`, no con `disabled`.
+- El calendario no cuelga de `#date_popup` sino del contenedor `date-picker-popup`, y viene
+  duplicado (escritorio y móvil). Se filtra con `visible=true`.
+- Cada día del calendario trae la clase `automation-date-picker-day-YYYY-M-D`; con eso se
+  selecciona la fecha y se navega de mes si hace falta (también funciona en cambio de año).
+- El popup de fechas a veces se abre y se cierra solo al terminar de capturar el destino; la
+  apertura se reintenta hasta 3 veces.
+- La lista de sugerencias se sincroniza esperando a que la primera opción traiga el código IATA
+  esperado, para no tomar resultados de la consulta anterior.
+- El tipo de viaje es un grupo de radios en escritorio y un dropdown en pantallas chicas; el
+  page object soporta los dos.
 
 ## Requisitos
 
-- Java 21 (`JAVA_HOME` configurado)
-- Gradle 8.4 (o usar el wrapper `gradlew`)
-- IntelliJ IDEA con plugins **Cucumber for Java** y **Gherkin**
-- Navegadores de Playwright (se descargan automáticamente en la primera ejecución; también:
-  `gradlew playwright --args="install chromium"`)
+Java 21 (`JAVA_HOME`), Gradle 8.4 o el wrapper, IntelliJ con los plugins Cucumber for Java y
+Gherkin. Los navegadores de Playwright se descargan solos en la primera corrida
+(o `gradlew playwright --args="install chromium"`).
 
-## Ejecución
+## Correr por consola
 
-```bash
-# Windows
-gradlew.bat test
+```
+gradlew.bat test                                  (Windows)
+./gradlew test                                    (Linux/macOS)
 
-# Linux / macOS
-./gradlew test
+gradlew test -Dheadless=true
+gradlew test -Dbrowser=firefox                    chromium | firefox | webkit
+gradlew test -Dchannel=chrome                     usar el Chrome instalado
+gradlew test -DslowMo=300                         ms entre acciones, para ver qué pasa
+gradlew test -DblockMedia=true                    sin imágenes/fuentes/video, carga más rápido
+gradlew test -DtraceMode=always                   off | on-failure | always
+gradlew test -Dcucumber.filter.tags=@smoke
 ```
 
-Opciones por línea de comandos (sobrescriben `configuration.properties`):
+## Correr desde IntelliJ
 
-```bash
-gradlew test -Dheadless=true                 # sin interfaz gráfica
-gradlew test -Dbrowser=firefox               # chromium | firefox | webkit
-gradlew test -DslowMo=300                    # retardo entre acciones (ms)
-gradlew test -Dcucumber.filter.tags=@smoke   # filtrar escenarios por tag
-```
-
-Desde IntelliJ: ejecutar `runners.TestRunner` o el archivo `.feature` directamente
-(el plugin Cucumber for Java usa `junit-platform.properties`).
+1. File > Open y elegir la carpeta del proyecto (donde está `build.gradle`). Esperar la
+   sincronización de Gradle.
+2. Settings > Build, Execution, Deployment > Build Tools > Gradle: Gradle JVM = Java 21.
+3. Cualquiera de estas:
+   - Clic derecho en `runners/TestRunner.java` > Run.
+   - Abrir `feature/busqueda_vuelos.feature` y usar el play junto a `Característica` o a un
+     `Escenario` (plugin Cucumber for Java; toma el glue de `junit-platform.properties`).
+   - Panel Gradle > Tasks > verification > test.
+4. Para pasar opciones desde el IDE: Run > Edit Configurations > VM options, p. ej.
+   `-Dheadless=true -DtraceMode=always`.
 
 ## Reportes y evidencias
 
-- Reporte Cucumber HTML: `build/reports/cucumber/cucumber.html`
-- Reporte JSON: `build/reports/cucumber/cucumber.json`
-- Reporte Gradle: `build/reports/tests/test/index.html`
-- Captura de pantalla automática cuando un escenario falla: `build/screenshots/`
+- Cucumber: `build/reports/cucumber/cucumber.html` (y `.json`)
+- Gradle: `build/reports/tests/test/index.html`
+- Si un escenario falla: captura en `build/screenshots/`, URL en el reporte y trace de Playwright
+  en `build/traces/` (se abre con `gradlew playwright --args="show-trace build/traces/<archivo>.zip"`).
+
+## Notas de diseño
+
+- Un navegador por hilo y un contexto nuevo por escenario: lanzar el navegador cuesta segundos,
+  un contexto cuesta milisegundos y mantiene el aislamiento.
+- Sin `sleep` ni `waitForTimeout`; todo se sincroniza por estado (auto-wait, `waitFor`,
+  `waitForCondition`).
+- Fechas relativas (`departureOffsetDays`, `tripLengthDays`) para que el escenario no caduque.
+- Adultos validados contra `min`/`max` del control y días deshabilitados reportados con mensaje
+  claro, en lugar de esperar al timeout.
+- Paralelismo listo: descomentar `cucumber.execution.parallel.*` en `junit-platform.properties`.
+- Con la variable de entorno `CI` definida corre headless solo.

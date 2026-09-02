@@ -22,3 +22,12 @@ Característica: Búsqueda de vuelos en American Express Travel
     Y confirma la selección de fechas con "Hecho"
     Y presiona el botón "Búsqueda"
     Entonces se debe mostrar el título "Iniciar sesión en mi cuenta"
+
+  @regresion
+  Escenario: El botón de disminuir adultos solo se habilita cuando hay más de un adulto
+    Cuando selecciona 2 adultos como viajeros
+    Entonces el botón para disminuir adultos debe estar habilitado
+    Cuando selecciona 1 adulto como viajero
+    Entonces el botón para disminuir adultos debe estar deshabilitado
+    Cuando confirma la selección de viajeros con "Hecho"
+    Entonces el resumen de viajeros debe indicar 1 viajero

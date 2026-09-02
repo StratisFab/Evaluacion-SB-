@@ -2,34 +2,36 @@ package page_objects;
 
 import java.util.Arrays;
 
-/**
- * Tipos de viaje disponibles en el buscador de vuelos.
- * Relaciona la etiqueta en español usada en los escenarios Gherkin con el
- * nombre accesible que muestra el sitio (en inglés).
- */
+/** Tipo de viaje: etiqueta en español del feature -> nombre en el sitio y valor del control. */
 public enum TripType {
-    ROUND_TRIP("Viaje de Ida y Vuelta", "Round Trip"),
-    ONE_WAY("Solo Ida", "One Way"),
-    MULTI_CITY("Multidestino", "Multi-City");
+    ROUND_TRIP("Viaje de Ida y Vuelta", "Round Trip", "ROUND_TRIP"),
+    ONE_WAY("Solo Ida", "One Way", "ONE_WAY"),
+    MULTI_CITY("Multidestino", "Multi-City", "MULTI_STOP");
 
     private final String spanishLabel;
     private final String accessibleName;
+    private final String siteValue;
 
-    TripType(String spanishLabel, String accessibleName) {
+    TripType(String spanishLabel, String accessibleName, String siteValue) {
         this.spanishLabel = spanishLabel;
         this.accessibleName = accessibleName;
+        this.siteValue = siteValue;
     }
 
     public String accessibleName() {
         return accessibleName;
     }
 
-    /** Acepta la etiqueta en español, en inglés o el nombre del enum (sin distinguir mayúsculas). */
+    public String siteValue() {
+        return siteValue;
+    }
+
     public static TripType fromLabel(String label) {
+        String normalized = label.trim();
         return Arrays.stream(values())
-                .filter(t -> t.spanishLabel.equalsIgnoreCase(label.trim())
-                        || t.accessibleName.equalsIgnoreCase(label.trim())
-                        || t.name().equalsIgnoreCase(label.trim()))
+                .filter(t -> t.spanishLabel.equalsIgnoreCase(normalized)
+                        || t.accessibleName.equalsIgnoreCase(normalized)
+                        || t.name().equalsIgnoreCase(normalized))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Tipo de viaje no soportado: " + label));
     }
