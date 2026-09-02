@@ -76,10 +76,12 @@ public class FlightsSearchPage extends BasePage {
 
         departureDateButton = page.locator("#date-picker-popup-button-start-date");
         returnDateButton = page.locator("#date-picker-popup-button-end-date");
-        datePopup = page.locator("#date_popup");
-        calendar = datePopup.getByTestId("date-picker-calendar");
+        // El contenedor del popup incluye los inputs de fecha, el calendario y el botón "Done".
+        // El calendario existe en dos variantes (escritorio y móvil); se filtra la visible.
+        datePopup = page.getByTestId("date-picker-popup");
+        calendar = datePopup.getByTestId("date-picker-calendar").locator("visible=true");
         nextMonthButton = datePopup.locator("#nextMonthBtn").locator("visible=true");
-        datesDoneButton = datePopup.locator("#doneBtn");
+        datesDoneButton = datePopup.locator("#doneBtn").locator("visible=true");
 
         searchButton = page.locator("#axp-travel-search-flights_searchButton");
     }
@@ -249,7 +251,7 @@ public class FlightsSearchPage extends BasePage {
      * Si el mes no está visible, se avanza con "Next Month" hasta encontrarlo.
      */
     private void selectDayInCalendar(LocalDate date) {
-        Locator day = datePopup.locator(dayLocator(date));
+        Locator day = datePopup.locator(dayLocator(date)).locator("visible=true");
         int attempts = 0;
         while (day.count() == 0 && attempts < MAX_MONTHS_TO_NAVIGATE) {
             nextMonthButton.click();

@@ -38,7 +38,7 @@ public class Hooks {
             Page page = PlaywrightManager.getPage();
             String fileName = scenario.getName().replaceAll("[^a-zA-Z0-9-_]", "_") + ".png";
             Path path = Paths.get(ConfigReader.get("screenshotsDir", "build/screenshots"), fileName);
-            byte[] screenshot = page.screenshot(new Page.ScreenshotOptions().setPath(path).setFullPage(true));
+            byte[] screenshot = page.screenshot(new Page.ScreenshotOptions().setPath(path));
             scenario.attach(screenshot, "image/png", scenario.getName());
         } catch (Exception e) {
             scenario.log("No fue posible capturar la pantalla: " + e.getMessage());
